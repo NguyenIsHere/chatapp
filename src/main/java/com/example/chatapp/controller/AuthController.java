@@ -19,20 +19,17 @@ public class AuthController {
   @Autowired
   private OtpRepository otpRepository;
 
-  // DTO cho request body của /request-otp
   @Data
   public static class RequestOtpRequest {
     private String phoneNumber;
   }
 
-  // DTO cho request body của /verify-otp
   @Data
   public static class VerifyOtpRequest {
     private String phoneNumber;
     private String otp;
   }
 
-  // DTO cho request body của /register
   @Data
   public static class RegisterRequest {
     private String phoneNumber;
@@ -42,13 +39,9 @@ public class AuthController {
   @PostMapping("/request-otp")
   public ResponseEntity<String> requestOtp(@RequestBody RequestOtpRequest request) {
     try {
-      // Firebase đã gửi OTP (123456 cho số test +84846920014)
-      // Lưu OTP vào database để backend kiểm tra
       String normalizedPhoneNumber = authService.normalizePhoneNumber(request.getPhoneNumber());
-      Otp otp = new Otp();
-      otp.setPhoneNumber(normalizedPhoneNumber);
-      otp.setOtp("123456"); // OTP cố định cho số test
-      otpRepository.save(otp);
+      // Không cần lưu OTP ở đây vì Firebase đã gửi OTP thật
+      // Backend chỉ cần biết số điện thoại để kiểm tra sau này
       return ResponseEntity.ok("OTP sent successfully");
     } catch (Exception e) {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -77,7 +70,6 @@ public class AuthController {
   @PostMapping("/register")
   public ResponseEntity<String> register(@RequestBody RegisterRequest request) {
     try {
-      // Kiểm tra dữ liệu đầu vào
       if (request.getPhoneNumber() == null || request.getPhoneNumber().isEmpty()) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
             .body("Phone number is required");

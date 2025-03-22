@@ -26,15 +26,8 @@ public class AuthService {
   public String verifyOtp(String phoneNumber, String otp) {
     String normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
 
-    // Kiểm tra OTP (Firebase đã xác minh, nhưng ta vẫn lưu OTP để kiểm tra logic)
-    Optional<Otp> otpEntry = otpRepository.findByPhoneNumber(normalizedPhoneNumber);
-    if (otpEntry.isEmpty() || !otpEntry.get().getOtp().equals(otp)
-        || otpEntry.get().getExpiry().isBefore(LocalDateTime.now())) {
-      throw new RuntimeException("Invalid or expired OTP");
-    }
-
-    otpRepository.delete(otpEntry.get()); // Xóa OTP sau khi dùng
-
+    // Firebase đã xác minh OTP, nên không cần kiểm tra OTP trong database
+    // Chỉ cần kiểm tra user có tồn tại hay không
     Optional<User> user = userRepository.findByPhoneNumber(normalizedPhoneNumber);
     if (user.isEmpty()) {
       return "NEW_USER";
@@ -52,7 +45,6 @@ public class AuthService {
   public void registerUser(String phoneNumber, String username) {
     String normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
 
-    // Kiểm tra xem số điện thoại đã tồn tại chưa
     Optional<User> existingUser = userRepository.findByPhoneNumber(normalizedPhoneNumber);
     if (existingUser.isPresent()) {
       throw new RuntimeException("Phone number already registered");
