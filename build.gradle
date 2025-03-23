@@ -34,6 +34,10 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
 
+    implementation 'jakarta.servlet:jakarta.servlet-api:5.0.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.0' 
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
+
     // Cập nhật Commons Lang3 lên phiên bản mới nhất
     implementation 'org.apache.commons:commons-lang3:3.14.0'
 

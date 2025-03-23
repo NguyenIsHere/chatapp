@@ -1,13 +1,11 @@
 package com.example.chatapp.service;
 
-import com.example.chatapp.model.Otp;
 import com.example.chatapp.model.User;
-import com.example.chatapp.repository.OtpRepository;
 import com.example.chatapp.repository.UserRepository;
+import com.example.chatapp.util.PhoneNumberUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Optional;
 
@@ -15,35 +13,41 @@ import java.util.Optional;
 public class AuthService {
 
   @Autowired
-  private OtpRepository otpRepository;
-
-  @Autowired
   private UserRepository userRepository;
 
   @Autowired
   private JwtService jwtService;
 
-  public String verifyOtp(String phoneNumber, String otp) {
-    String normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
+  public String[] login(String phoneNumber) {
+    String normalizedPhoneNumber = PhoneNumberUtil.normalizePhoneNumber(phoneNumber);
 
-    // Firebase đã xác minh OTP, nên không cần kiểm tra OTP trong database
-    // Chỉ cần kiểm tra user có tồn tại hay không
-    Optional<User> user = userRepository.findByPhoneNumber(normalizedPhoneNumber);
-    if (user.isEmpty()) {
-      return "NEW_USER";
+    // Kiểm tra user có tồn tại hay không
+    Optional<User> userOptional = userRepository.findByPhoneNumber(normalizedPhoneNumber);
+    if (userOptional.isEmpty()) {
+      throw new RuntimeException("NEW_USER");
     }
 
-    String accessToken = jwtService.generateAccessToken(normalizedPhoneNumber);
-    String refreshToken = jwtService.generateRefreshToken(normalizedPhoneNumber);
+    User user = userOptional.get();
+    String refreshToken = user.getRefreshToken();
+    String accessToken;
 
-    user.get().setRefreshToken(refreshToken);
-    userRepository.save(user.get());
+    // Kiểm tra refreshToken còn khả dụng không
+    if (refreshToken != null && jwtService.validateToken(refreshToken)) {
+      // Refresh token còn khả dụng, tạo access token mới
+      accessToken = jwtService.generateAccessToken(normalizedPhoneNumber);
+    } else {
+      // Refresh token không khả dụng, tạo mới cả access và refresh token
+      accessToken = jwtService.generateAccessToken(normalizedPhoneNumber);
+      refreshToken = jwtService.generateRefreshToken(normalizedPhoneNumber);
+      user.setRefreshToken(refreshToken);
+      userRepository.save(user);
+    }
 
-    return accessToken + "," + refreshToken;
+    return new String[] { accessToken, refreshToken };
   }
 
   public void registerUser(String phoneNumber, String username) {
-    String normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
+    String normalizedPhoneNumber = PhoneNumberUtil.normalizePhoneNumber(phoneNumber);
 
     Optional<User> existingUser = userRepository.findByPhoneNumber(normalizedPhoneNumber);
     if (existingUser.isPresent()) {
@@ -56,17 +60,5 @@ public class AuthService {
     user.setCreatedAt(new Date());
     user.setRefreshToken(jwtService.generateRefreshToken(normalizedPhoneNumber));
     userRepository.save(user);
-  }
-
-  public String normalizePhoneNumber(String phoneNumber) {
-    String cleanedNumber = phoneNumber.replaceAll("[^0-9+]", "");
-    if (!cleanedNumber.startsWith("+")) {
-      if (cleanedNumber.startsWith("0")) {
-        cleanedNumber = "+84" + cleanedNumber.substring(1);
-      } else {
-        cleanedNumber = "+84" + cleanedNumber;
-      }
-    }
-    return cleanedNumber;
   }
 }

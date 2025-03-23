@@ -11,6 +11,7 @@ import java.util.Date;
 
 @Service
 public class JwtService {
+
   @Value("${jwt.secret}")
   private String secretKey;
 
@@ -52,6 +53,19 @@ public class JwtService {
       return true;
     } catch (JwtException | IllegalArgumentException e) {
       return false;
+    }
+  }
+
+  public String getPhoneNumberFromToken(String token) {
+    try {
+      Claims claims = Jwts.parser()
+          .verifyWith(getSigningKey())
+          .build()
+          .parseSignedClaims(token)
+          .getPayload();
+      return claims.getSubject();
+    } catch (JwtException | IllegalArgumentException e) {
+      throw new RuntimeException("Invalid token");
     }
   }
 }
