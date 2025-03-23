@@ -27,10 +27,12 @@ public class SecurityConfig {
         .csrf(csrf -> csrf.disable()) // Tắt CSRF cho API
         .authorizeHttpRequests(auth -> auth
             // Cho phép truy cập không cần auth vào các endpoint auth
-            .requestMatchers("/auth/login", "/auth/register", "/auth/refresh")
+//            .requestMatchers("/auth/login", "/auth/register", "/auth/refresh")
+            .anyRequest()
             .permitAll()
             // Các endpoint khác yêu cầu xác thực
-            .anyRequest().authenticated())
+//            .anyRequest().authenticated()
+        )
         // Thêm JwtAuthenticationFilter trước UsernamePasswordAuthenticationFilter
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
