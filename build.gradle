@@ -43,6 +43,9 @@ dependencies {
     // http://localhost:8080/swagger-ui.html
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.1.0'
 
+    // Data redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
     // Cập nhật Commons Lang3 lên phiên bản mới nhất
     implementation 'org.apache.commons:commons-lang3:3.14.0'
 
