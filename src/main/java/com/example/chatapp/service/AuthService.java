@@ -8,7 +8,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 public class AuthService {
 
@@ -47,6 +49,7 @@ public class AuthService {
     }
 
     // Đánh dấu user online trong Redis
+    log.info("Setting user online with ID = {}", user.getId());
     presenceService.setUserOnline(user.getId());
 
     return new String[] { accessToken, refreshToken };
