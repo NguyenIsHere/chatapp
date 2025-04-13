@@ -113,4 +113,16 @@ public class AuthController {
           .body(new AuthResponseDto(null, null, "Internal server error: " + e.getMessage()));
     }
   }
+
+  @PostMapping("/logout")
+  public ResponseEntity<?> logout() {
+    // Lấy userId từ SecurityContext (accessToken)
+    String phoneNumber = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    User user = userRepository.findByPhoneNumber(phoneNumber).orElse(null);
+    if (user != null) {
+      authService.logout(user.getId());
+    }
+    return ResponseEntity.ok("Logged out and set offline");
+  }
+
 }

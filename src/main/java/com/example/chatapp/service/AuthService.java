@@ -8,7 +8,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 public class AuthService {
 
@@ -17,6 +19,9 @@ public class AuthService {
 
   @Autowired
   private JwtService jwtService;
+
+  @Autowired
+  private PresenceService presenceService;
 
   public String[] login(String phoneNumber) {
     String normalizedPhoneNumber = PhoneNumberUtil.normalizePhoneNumber(phoneNumber);
@@ -43,6 +48,10 @@ public class AuthService {
       userRepository.save(user);
     }
 
+    // Đánh dấu user online trong Redis
+    log.info("Setting user online with ID = {}", user.getId());
+    presenceService.setUserOnline(user.getId());
+
     return new String[] { accessToken, refreshToken };
   }
 
@@ -60,5 +69,18 @@ public class AuthService {
     user.setCreatedAt(new Date());
     user.setRefreshToken(jwtService.generateRefreshToken(normalizedPhoneNumber));
     userRepository.save(user);
+  }
+
+  // Hàm logout
+  public void logout(String userId) {
+    // Đánh dấu user offline
+    presenceService.setUserOffline(userId);
+
+    // (Tuỳ chọn) cập nhật lastSeenAt
+    User user = userRepository.findById(userId).orElse(null);
+    if (user != null) {
+      // user.setLastSeenAt(new Date());
+      userRepository.save(user);
+    }
   }
 }

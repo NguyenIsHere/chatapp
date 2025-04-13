@@ -26,9 +26,9 @@ public class SecurityConfig {
         .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Bật CORS
         .csrf(csrf -> csrf.disable()) // Tắt CSRF cho API
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/chat/**", "/topic/**", "/app/**").permitAll() // Allow websocket endpoints
-            .anyRequest().permitAll()
-        )
+            .requestMatchers("/auth/login", "/auth/register", "/auth/refresh")
+            .permitAll()
+            .anyRequest().authenticated())
         // Thêm JwtAuthenticationFilter trước UsernamePasswordAuthenticationFilter
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
