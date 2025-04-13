@@ -26,12 +26,8 @@ public class SecurityConfig {
         .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Bật CORS
         .csrf(csrf -> csrf.disable()) // Tắt CSRF cho API
         .authorizeHttpRequests(auth -> auth
-            // Cho phép truy cập không cần auth vào các endpoint auth
-//            .requestMatchers("/auth/login", "/auth/register", "/auth/refresh")
-            .anyRequest()
-            .permitAll()
-            // Các endpoint khác yêu cầu xác thực
-//            .anyRequest().authenticated()
+            .requestMatchers("/chat/**", "/topic/**", "/app/**").permitAll() // Allow websocket endpoints
+            .anyRequest().permitAll()
         )
         // Thêm JwtAuthenticationFilter trước UsernamePasswordAuthenticationFilter
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -42,10 +38,11 @@ public class SecurityConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
-    configuration.setAllowedOrigins(Arrays.asList("*")); // Cho phép tất cả nguồn gốc
+    configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173")); // Specify exact origin
     configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-    configuration.setAllowedHeaders(Arrays.asList("*")); // Cho phép tất cả header, bao gồm Authorization
-    configuration.setAllowCredentials(false);
+    configuration.setAllowedHeaders(Arrays.asList("*"));
+    configuration.setAllowCredentials(true); // Enable credentials
+    configuration.addAllowedHeader("Authorization"); // Allow Authorization header
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", configuration);
