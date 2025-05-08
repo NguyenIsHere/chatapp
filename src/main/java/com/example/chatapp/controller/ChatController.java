@@ -7,6 +7,7 @@ import com.example.chatapp.repository.entities.Room;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -19,39 +20,25 @@ import org.springframework.web.bind.annotation.RequestBody;
 import java.time.LocalDateTime;
 
 @Controller
-@CrossOrigin("http://localhost:5173")
+@RequiredArgsConstructor
 public class ChatController {
 
 
-    private RoomRepository roomRepository;
-
-    public ChatController(RoomRepository roomRepository) {
-        this.roomRepository = roomRepository;
-    }
-
+    private final RoomRepository roomRepository;
+    private final KafkaTemplate<String, Message> kafkaTemplate;
 
     //for sending and receiving messages
     @MessageMapping("/sendMessage/{roomId}")// /app/sendMessage/roomId
-    @SendTo("/topic/room/{roomId}")//subscribe
-    public Message sendMessage(
+    public void sendMessage(
             @DestinationVariable String roomId,
             @RequestBody MessageRequests request
     ) {
-
-        Room room = roomRepository.findByRoomId(request.getRoomId());
         Message message = new Message();
         message.setContent(request.getContent());
         message.setSender(request.getSender());
         message.setTimeStamp(LocalDateTime.now());
-        if (room != null) {
-            room.getMessages().add(message);
-            roomRepository.save(room);
-        } else {
-            throw new RuntimeException("room not found !!");
-        }
-
-        return message;
-
+        message.setRoomId(roomId);
+        kafkaTemplate.send("chat-messages", message);
 
     }
 }

@@ -29,6 +29,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    // Spring for Apache Kafka (producer/consumer abstraction)
+    implementation 'org.springframework.kafka:spring-kafka'
 
     // Cập nhật JJWT lên phiên bản mới nhất (Java JWT)
     implementation 'io.jsonwebtoken:jjwt-api:0.12.5'

@@ -1,4 +1,6 @@
 package com.example.chatapp.controller;
+
+import com.example.chatapp.dto.MessageRequests;
 import com.example.chatapp.repository.RoomRepository;
 import com.example.chatapp.repository.entities.Message;
 import com.example.chatapp.repository.entities.Room;
@@ -15,7 +17,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/rooms")
-@CrossOrigin("http://localhost:5173")
 public class RoomController {
 
     private RoomRepository roomRepository;
