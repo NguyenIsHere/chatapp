@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 public class ChatController {
 
 
+    private static final Logger log = LoggerFactory.getLogger(ChatController.class);
     private final RoomRepository roomRepository;
     private final KafkaTemplate<String, Message> kafkaTemplate;
 
@@ -38,6 +39,7 @@ public class ChatController {
         message.setSender(request.getSender());
         message.setTimeStamp(LocalDateTime.now());
         message.setRoomId(roomId);
+        log.info("Message sent: " + message);
         kafkaTemplate.send("chat-messages", message);
 
     }
