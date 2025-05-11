@@ -17,10 +17,11 @@ public class ChatMessageListener {
         this.messagingTemplate = messagingTemplate;
     }
 
-    @KafkaListener(topics = "chat-messages", groupId = "chat-group-2", containerFactory = "kafkaListenerContainerFactory")
+    // Loại bỏ groupId khỏi đây, nó sẽ được lấy từ cấu hình ConsumerFactory
+    @KafkaListener(topics = "chat-messages", containerFactory = "kafkaListenerContainerFactory")
     public void listen(Message message) {
-        log.info("Received message: {}", message);
+        log.info("Received message in instance: {}, message: {}", System.getenv("SPRING_KAFKA_CONSUMER_GROUP_ID"),
+                message); // Thêm log để biết instance nào nhận
         messagingTemplate.convertAndSend("/topic/room/" + message.getRoomId(), message);
     }
 }
-

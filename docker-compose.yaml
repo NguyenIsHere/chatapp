@@ -10,15 +10,63 @@ services:
       - ./data:/data
     command: ["redis-server", "--appendonly", "yes"]
 
-  chatapp:
-    container_name: chatapp-container
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+  chatapp1: # Backend chạy trên port host 8080
+    container_name: chatapp1-container
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8080:8080" 
     depends_on:
       - redis
+      - kafka
     environment:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_CONSUMER_GROUP_ID: chat-group-instance-1 # Group ID riêng cho instance 1
+      SERVER_PORT: 8080 # Đảm bảo ứng dụng Spring Boot lắng nghe trên port này bên trong container
+
+  chatapp2: # Backend chạy trên port host 8081
+    container_name: chatapp2-container
+    build:
+      context: .
+      dockerfile: Dockerfile 
+    ports:
+      - "8081:8080" # Instance 2 map port 8081 của host vào port 8080 của container
+    depends_on:
+      - redis
+      - kafka
+    environment:
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_CONSUMER_GROUP_ID: chat-group-instance-2 # Group ID riêng cho instance 2
+      SERVER_PORT: 8080 # Đảm bảo ứng dụng Spring Boot lắng nghe trên port này bên trong container
+
+volumes:
+  data:

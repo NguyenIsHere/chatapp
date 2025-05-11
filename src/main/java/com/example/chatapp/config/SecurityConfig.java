@@ -17,20 +17,13 @@ import java.util.Arrays;
 @EnableWebSecurity
 public class SecurityConfig {
 
-  @Autowired
-  private JwtAuthenticationFilter jwtAuthenticationFilter;
-
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
         .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Bật CORS
         .csrf(csrf -> csrf.disable()) // Tắt CSRF cho API
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/auth/login", "/auth/register", "/auth/refresh")
-            .permitAll()
-            .anyRequest().authenticated())
-        // Thêm JwtAuthenticationFilter trước UsernamePasswordAuthenticationFilter
-        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .anyRequest().permitAll());
 
     return http.build();
   }
@@ -38,7 +31,8 @@ public class SecurityConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
-    configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173","http://localhost:5174")); // Specify exact origin
+    configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://localhost:5174")); // Specify exact
+                                                                                                      // origin
     configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
     configuration.setAllowedHeaders(Arrays.asList("*"));
     configuration.setAllowCredentials(true); // Enable credentials
