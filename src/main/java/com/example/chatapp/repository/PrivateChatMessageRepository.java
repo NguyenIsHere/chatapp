@@ -9,10 +9,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PrivateChatMessageRepository extends MongoRepository<PrivateChatMessage, String> {
-  // Lấy tin nhắn cho một cuộc hội thoại cụ thể, sắp xếp theo thời gian
   List<PrivateChatMessage> findByConversationIdOrderByTimestampAsc(String conversationId);
 
   Page<PrivateChatMessage> findByConversationIdOrderByTimestampDesc(String conversationId, Pageable pageable);
 
-  Optional<PrivateChatMessage> findByMessageId(String messageId); // THÊM PHƯƠNG THỨC NÀY
+  Optional<PrivateChatMessage> findByMessageId(String messageId);
 }

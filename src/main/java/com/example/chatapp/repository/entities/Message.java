@@ -37,7 +37,7 @@ public class Message {
     // Static factory method cho tin nhắn ROOM
     public static Message newRoomMessage(String messageId, String sender, String content, String roomId) {
         Message msg = new Message();
-        msg.setMessageId(messageId); // Set messageId
+        msg.setMessageId(messageId);
         msg.setSender(sender);
         msg.setContent(content);
         msg.setRoomId(roomId);
@@ -50,7 +50,7 @@ public class Message {
     public static Message newPrivateMessage(String messageId, String sender, String recipientPhoneNumber,
             String content) {
         Message msg = new Message();
-        msg.setMessageId(messageId); // Set messageId
+        msg.setMessageId(messageId);
         msg.setSender(sender);
         msg.setRecipientPhoneNumber(recipientPhoneNumber);
         msg.setContent(content);

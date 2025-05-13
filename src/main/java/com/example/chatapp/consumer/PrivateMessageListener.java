@@ -9,11 +9,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DuplicateKeyException; // THÊM IMPORT
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
-// import java.util.Optional; // Không cần Optional nếu dùng DuplicateKeyException
 
 @Component
 public class PrivateMessageListener {
@@ -61,23 +60,14 @@ public class PrivateMessageListener {
       log.info("[Instance: {}] Successfully saved PRIVATE message ID [{}] to DB. DB_ID: {}",
           currentInstanceId, messageId, chatToSave.getId());
     } catch (DuplicateKeyException e) {
-      // Lỗi này xảy ra nếu một instance khác đã lưu tin nhắn với cùng messageId (do
-      // unique index)
-      // Đây là hành vi mong đợi trong môi trường multi-instance consumer group riêng
-      // biệt.
       log.warn(
           "[Instance: {}] PRIVATE message ID [{}] already exists in DB (likely saved by another instance). Skipping save. Exception: {}",
           currentInstanceId, messageId, e.getMessage());
-      // Không cần làm gì thêm, tin nhắn đã được lưu.
     } catch (Exception e) {
-      // Các lỗi khác khi lưu DB
       log.error(
           "[Instance: {}] Error saving PRIVATE message ID [{}] to DB (Sender: {}, Recipient: {}): {}. Message: {}",
           currentInstanceId, messageId, senderPhoneNumber, recipientPhoneNumber, e.getMessage(), kafkaReceivedMessage,
           e);
-      // Tùy thuộc vào chính sách, bạn có thể quyết định có gửi WebSocket không nếu
-      // lưu DB lỗi
-      // Hiện tại, chúng ta vẫn sẽ thử gửi WebSocket.
     }
     // --- KẾT THÚC LƯU DATABASE ---
 
