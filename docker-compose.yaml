@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7.2-alpine # Sử dụng version cụ thể và alpine cho nhẹ
+    container_name: my-redis-container
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data # Sử dụng named volume
+    command: ["redis-server", "--appendonly", "yes"]
+    restart: unless-stopped
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.3 # Sử dụng version cụ thể
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.3 # Sử dụng version cụ thể
+    container_name: kafka
+    # Cân nhắc không expose port 9092 ra host nếu chỉ giao tiếp nội bộ
+    # ports:
+    #   - "9093:9093" # Ví dụ: port này cho kết nối từ bên ngoài nếu cần
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_LISTENERS: INTERNAL://:9092,EXTERNAL://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9093 # localhost là từ máy host
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1 # Cho confluent images
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1 # Cho confluent images
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1 # Cho môi trường dev 1 broker
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1 # Cho môi trường dev 1 broker
+      KAFKA_MESSAGE_MAX_BYTES: 5242880 # 5MB
+      KAFKA_REPLICA_FETCH_MAX_BYTES: 5242880
+    restart: unless-stopped
+
+  chatapp1:
+    container_name: chatapp1-container
+    build:
+      context: . # Thư mục chứa Dockerfile và source code Spring Boot của bạn
+      dockerfile: Dockerfile
+    depends_on:
+      - redis
+      - kafka
+    environment:
+      SERVER_PORT: 8080
+      INSTANCE_ID: chatapp_instance_1
+      SPRING_PROFILES_ACTIVE: prod # Hoặc dev tùy bạn
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_CONSUMER_GROUP_ID: chat-group-instance-1 # Group ID riêng
+      SPRING_DATA_MONGODB_URI: "mongodb+srv://22520988:22520988@cluster0.zeztdiz.mongodb.net/ChatApp?retryWrites=true&w=majority&appName=Cluster0" # Thay bằng URI thật của bạn
+      JWT_SECRET: "VGhpcyBpcyBhIHNlY3JldCBrZXkgZm9yIEpXVC4=" # Nên dùng biến môi trường ngoài
+      JWT_ACCESS_EXPIRATION: "3600000" # 1 giờ
+      JWT_REFRESH_EXPIRATION: "604800000" # 7 ngày
+    restart: unless-stopped
+
+  chatapp2:
+    container_name: chatapp2-container
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - redis
+      - kafka
+    environment:
+      SERVER_PORT: 8080
+      INSTANCE_ID: chatapp_instance_2
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_CONSUMER_GROUP_ID: chat-group-instance-2 # Group ID riêng
+      SPRING_DATA_MONGODB_URI: "mongodb+srv://22520988:22520988@cluster0.zeztdiz.mongodb.net/ChatApp?retryWrites=true&w=majority&appName=Cluster0" # Thay bằng URI thật của bạn
+      JWT_SECRET: "VGhpcyBpcyBhIHNlY3JldCBrZXkgZm9yIEpXVC4="
+      JWT_ACCESS_EXPIRATION: "3600000"
+      JWT_REFRESH_EXPIRATION: "604800000"
+    restart: unless-stopped
+
+  nginx-lb:
+    image: nginx:1.27-alpine # Sử dụng version cụ thể
+    container_name: nginx-loadbalancer
+    ports:
+      - "8088:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - chatapp1
+      - chatapp2
+    restart: unless-stopped
+
+volumes:
+  redis_data: # Named volume cho Redis

@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -12,6 +13,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -23,17 +25,17 @@ public class SecurityConfig {
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
-        .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Bật CORS
-        .csrf(csrf -> csrf.disable()) // Tắt CSRF cho API
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        .csrf(csrf -> csrf.disable())
+        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
-            // Cho phép truy cập không cần auth vào các endpoint auth
-//            .requestMatchers("/auth/login", "/auth/register", "/auth/refresh")
-            .anyRequest()
-            .permitAll()
-            // Các endpoint khác yêu cầu xác thực
-//            .anyRequest().authenticated()
-        )
-        // Thêm JwtAuthenticationFilter trước UsernamePasswordAuthenticationFilter
+            // SỬA ĐỔI QUAN TRỌNG Ở ĐÂY:
+            .requestMatchers("/api/v1/auth/**").permitAll() // Cho phép tất cả các path bắt đầu bằng /api/v1/auth/
+            .requestMatchers("/ws/**").permitAll()
+            .requestMatchers("/api/v1/users/**").authenticated()
+            .requestMatchers("/api/v1/rooms/**").authenticated()
+            .requestMatchers("/api/v1/chat-history/**").authenticated()
+            .anyRequest().authenticated())
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
@@ -42,10 +44,18 @@ public class SecurityConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
-    configuration.setAllowedOrigins(Arrays.asList("*")); // Cho phép tất cả nguồn gốc
+    configuration.setAllowedOrigins(Arrays.asList(
+        "http://localhost:3000", // React dev server
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost", // Nginx nếu ở port 80
+        "http://localhost:8088" // Nginx nếu ở port 8088
+    ));
     configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-    configuration.setAllowedHeaders(Arrays.asList("*")); // Cho phép tất cả header, bao gồm Authorization
-    configuration.setAllowCredentials(false);
+    configuration.setAllowedHeaders(List.of("*"));
+    configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Disposition"));
+    configuration.setAllowCredentials(true);
+    configuration.setMaxAge(3600L);
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", configuration);

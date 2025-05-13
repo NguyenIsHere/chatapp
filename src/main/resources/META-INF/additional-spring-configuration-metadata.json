@@ -1,42 +1,67 @@
-{"properties": [
-  {
-    "name": "jwt.refresh.expiration",
-    "type": "java.lang.String",
-    "description": "A description for 'jwt.refresh.expiration'"
-  },
-  {
-    "name": "jwt.access.expiration",
-    "type": "java.lang.String",
-    "description": "A description for 'jwt.access.expiration'"
-  },
-  {
-    "name": "jwt.secret",
-    "type": "java.lang.String",
-    "description": "A description for 'jwt.secret'"
-  },
-  {
-    "name": "twilio.phone.number",
-    "type": "java.lang.String",
-    "description": "A description for 'twilio.phone.number'"
-  },
-  {
-  "name": "jwt.secret",
-    "type": "java.lang.String",
-    "description": "A description for 'jwt.secret'"
-  },
-  {
-    "name": "twilio.auth.token",
-    "type": "java.lang.String",
-    "description": "A description for 'twilio.auth.token'"
-  },
-  {
-    "name": "jwt.secret",
-    "type": "java.lang.String",
-    "description": "A description for 'jwt.secret'"
-  },
-  {
-    "name": "twilio.account.sid",
-    "type": "java.lang.String",
-    "description": "A description for 'twilio.account.sid'"
-  }
-]}
+{
+  "properties": [
+    {
+      "name": "jwt.refresh.expiration",
+      "type": "java.lang.String",
+      "description": "Thời gian hết hạn cho refresh token (ví dụ: 604800000 cho 7 ngày)."
+    },
+    {
+      "name": "jwt.access.expiration",
+      "type": "java.lang.String",
+      "description": "Thời gian hết hạn cho access token (ví dụ: 3600000 cho 1 giờ)."
+    },
+    {
+      "name": "jwt.secret",
+      "type": "java.lang.String",
+      "description": "Khóa bí mật (base64 encoded) để ký và xác minh JWT."
+    },
+    {
+      "name": "kafka.topic.room-messages",
+      "type": "java.lang.String",
+      "description": "Tên Kafka topic cho tin nhắn của các phòng chat chung."
+    },
+    {
+      "name": "kafka.topic.private-messages",
+      "type": "java.lang.String",
+      "description": "Tên Kafka topic cho tin nhắn riêng tư (1-1)."
+    },
+    {
+      "name": "instance.id",
+      "type": "java.lang.String",
+      "description": "ID định danh cho instance hiện tại của ứng dụng, thường được đặt qua biến môi trường."
+    },
+    {
+      "name": "spring.jackson.serialization.write-dates-as-timestamps",
+      "type": "java.lang.Boolean",
+      "description": "Xác định xem Jackson có nên serialize kiểu Date/Time thành timestamp số hay không. Nên đặt là false để dùng định dạng chuỗi ISO.",
+      "defaultValue": false
+    },
+    {
+      "name": "spring.jackson.datatype.jsr310.deserialization.date-time-format",
+      "type": "java.lang.String",
+      "description": "Định dạng chuỗi để deserialize LocalDateTime từ JSON (cho Java 8 Time API).",
+      "defaultValue": "yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS"
+    },
+    {
+      "name": "spring.jackson.datatype.jsr310.serialization.date-time-format",
+      "type": "java.lang.String",
+      "description": "Định dạng chuỗi để serialize LocalDateTime sang JSON (cho Java 8 Time API).",
+      "defaultValue": "yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS"
+    }
+  ],
+  "hints": [
+    {
+      "name": "instance.id",
+      "values": [
+        {
+          "value": "chatapp_instance_1",
+          "description": "Ví dụ ID cho instance 1."
+        },
+        {
+          "value": "chatapp_instance_2",
+          "description": "Ví dụ ID cho instance 2."
+        }
+      ]
+    }
+  ]
+}
