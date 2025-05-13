@@ -24,18 +24,16 @@ public class MongoIndexConfiguration {
     log.info("Ensuring MongoDB indexes are created...");
     try {
       IndexOperations indexOps = mongoTemplate.indexOps(PrivateChatMessage.class); // Hoặc tên collection
-                                                                                   // "private_chat_messages"
 
       // Tạo unique index trên messageId
       Index messageIdIndex = new Index().on("messageId", Sort.Direction.ASC).unique();
       indexOps.ensureIndex(messageIdIndex);
       log.info("Ensured unique index on 'messageId' for PrivateChatMessage collection.");
 
-      // Bạn có thể thêm các index khác ở đây nếu cần
-      // Ví dụ: index trên conversationId và timestamp để tối ưu query lịch sử chat
+      // index trên conversationId và timestamp để tối ưu query lịch sử chat
       Index conversationTimestampIndex = new Index()
           .on("conversationId", Sort.Direction.ASC)
-          .on("timestamp", Sort.Direction.DESC); // DESC để lấy tin mới nhất trước
+          .on("timestamp", Sort.Direction.DESC);
       indexOps.ensureIndex(conversationTimestampIndex);
       log.info("Ensured index on 'conversationId' and 'timestamp' for PrivateChatMessage collection.");
 

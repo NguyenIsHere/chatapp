@@ -24,9 +24,6 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.5.3 # Sử dụng version cụ thể
     container_name: kafka
-    # Cân nhắc không expose port 9092 ra host nếu chỉ giao tiếp nội bộ
-    # ports:
-    #   - "9093:9093" # Ví dụ: port này cho kết nối từ bên ngoài nếu cần
     depends_on:
       - zookeeper
     environment:
@@ -49,7 +46,7 @@ services:
   chatapp1:
     container_name: chatapp1-container
     build:
-      context: . # Thư mục chứa Dockerfile và source code Spring Boot của bạn
+      context: . # Thư mục chứa Dockerfile và source code 
       dockerfile: Dockerfile
     depends_on:
       - redis
@@ -57,13 +54,13 @@ services:
     environment:
       SERVER_PORT: 8080
       INSTANCE_ID: chatapp_instance_1
-      SPRING_PROFILES_ACTIVE: prod # Hoặc dev tùy bạn
+      SPRING_PROFILES_ACTIVE: prod 
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_KAFKA_CONSUMER_GROUP_ID: chat-group-instance-1 # Group ID riêng
-      SPRING_DATA_MONGODB_URI: "mongodb+srv://22520988:22520988@cluster0.zeztdiz.mongodb.net/ChatApp?retryWrites=true&w=majority&appName=Cluster0" # Thay bằng URI thật của bạn
-      JWT_SECRET: "VGhpcyBpcyBhIHNlY3JldCBrZXkgZm9yIEpXVC4=" # Nên dùng biến môi trường ngoài
+      SPRING_DATA_MONGODB_URI: "mongodb+srv://22520988:22520988@cluster0.zeztdiz.mongodb.net/ChatApp?retryWrites=true&w=majority&appName=Cluster0" 
+      JWT_SECRET: "VGhpcyBpcyBhIHNlY3JldCBrZXkgZm9yIEpXVC4=" 
       JWT_ACCESS_EXPIRATION: "3600000" # 1 giờ
       JWT_REFRESH_EXPIRATION: "604800000" # 7 ngày
     restart: unless-stopped
@@ -84,7 +81,7 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_KAFKA_CONSUMER_GROUP_ID: chat-group-instance-2 # Group ID riêng
-      SPRING_DATA_MONGODB_URI: "mongodb+srv://22520988:22520988@cluster0.zeztdiz.mongodb.net/ChatApp?retryWrites=true&w=majority&appName=Cluster0" # Thay bằng URI thật của bạn
+      SPRING_DATA_MONGODB_URI: "mongodb+srv://22520988:22520988@cluster0.zeztdiz.mongodb.net/ChatApp?retryWrites=true&w=majority&appName=Cluster0" 
       JWT_SECRET: "VGhpcyBpcyBhIHNlY3JldCBrZXkgZm9yIEpXVC4="
       JWT_ACCESS_EXPIRATION: "3600000"
       JWT_REFRESH_EXPIRATION: "604800000"
