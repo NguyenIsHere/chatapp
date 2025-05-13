@@ -6,9 +6,9 @@ services:
     container_name: my-redis-container
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data # Sử dụng named volume
-    command: ["redis-server", "--appendonly", "yes"]
+    # volumes:
+    #   - redis_data:/data # Sử dụng named volume
+    # command: ["redis-server", "--appendonly", "yes"]
     restart: unless-stopped
 
   zookeeper:
@@ -99,5 +99,5 @@ services:
       - chatapp2
     restart: unless-stopped
 
-volumes:
-  redis_data: # Named volume cho Redis
+# volumes:
+#   redis_data: # Named volume cho Redis

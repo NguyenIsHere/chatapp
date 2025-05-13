@@ -1,3 +1,4 @@
+// src/main/java/com/example/chatapp/config/WebSocketConfig.java
 package com.example.chatapp.config;
 
 import com.example.chatapp.service.PresenceService;
@@ -27,17 +28,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private PresenceService presenceService;
 
     @Value("${instance.id}")
-    private String instanceId;
+    private String instanceId; // ID của instance hiện tại
 
-    @Autowired // Inject AuthChannelInterceptor
+    @Autowired
     private AuthChannelInterceptor authChannelInterceptor;
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
                 .setAllowedOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost",
-                        "http://localhost:3000") // Thêm port React Dev Server
-                .setAllowedOriginPatterns("*")
+                        "http://localhost:3000", "http://localhost:8088") // Thêm các origin cần thiết
+                .setAllowedOriginPatterns("*") // Cân nhắc bỏ nếu đã có setAllowedOrigins cụ thể
                 .withSockJS();
     }
 
@@ -48,8 +49,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.setUserDestinationPrefix("/user");
     }
 
-    // Override phương thức này để đăng ký interceptor cho channel đầu vào của
-    // client
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         log.info("Registering AuthChannelInterceptor for client inbound channel...");
@@ -58,38 +57,51 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @EventListener
     public void handleWebSocketConnectListener(SessionConnectEvent event) {
-        log.info(">>> handleWebSocketConnectListener INVOKED. Session ID: {}", event.getMessage().getHeaders().getId());
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        Principal principal = accessor.getUser(); // Bây giờ principal nên có giá trị nếu AuthChannelInterceptor hoạt
-                                                  // động
+        String sessionId = accessor.getSessionId();
+        Principal principal = accessor.getUser();
 
-        if (principal != null && principal.getName() != null) {
+        log.info(">>> handleWebSocketConnectListener INVOKED. Session ID: {}, Instance ID: {}", sessionId, instanceId);
+
+        if (principal != null && principal.getName() != null && sessionId != null) {
             String phoneNumber = principal.getName();
-            log.info("User {} connected via WebSocket on instance: {}. Principal: {}", phoneNumber, instanceId,
-                    principal);
-            presenceService.setUserOnline(phoneNumber, instanceId);
+            log.info("User {} (Principal: {}) connected via WebSocket session {} on instance: {}",
+                    phoneNumber, principal, sessionId, instanceId);
+            presenceService.addSession(phoneNumber, instanceId, sessionId);
         } else {
             log.warn(
-                    "WebSocket connected BUT Principal is NULL or name is NULL. Session ID: {}. User will NOT be marked online.",
-                    accessor.getSessionId());
+                    "WebSocket connected (Session ID: {}) BUT Principal is NULL or name/sessionId is NULL. User will NOT be marked online by this event.",
+                    sessionId);
         }
     }
 
     @EventListener
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
-        log.info(">>> handleWebSocketDisconnectListener INVOKED. Session ID: {}",
-                event.getMessage().getHeaders().getId());
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        Principal principal = accessor.getUser();
+        String sessionId = accessor.getSessionId(); // Luôn lấy sessionId
+        Principal principal = accessor.getUser(); // Principal có thể null nếu disconnect đột ngột trước khi auth
 
-        if (principal != null && principal.getName() != null) {
+        log.info(">>> handleWebSocketDisconnectListener INVOKED. Session ID: {}, Instance ID: {}", sessionId,
+                instanceId);
+
+        if (principal != null && principal.getName() != null && sessionId != null) {
             String phoneNumber = principal.getName();
-            log.info("User {} disconnected via WebSocket from instance: {}. Principal: {}", phoneNumber, instanceId,
-                    principal);
-            presenceService.setUserOffline(phoneNumber);
+            log.info("User {} (Principal: {}) disconnected via WebSocket session {} from instance: {}",
+                    phoneNumber, principal, sessionId, instanceId);
+            presenceService.removeSession(phoneNumber, instanceId, sessionId);
+        } else if (sessionId != null) {
+            // Trường hợp không có principal (ví dụ client đóng tab trước khi STOMP CONNECT
+            // hoàn tất với auth)
+            // Chúng ta có thể không biết phoneNumber để xóa khỏi Set
+            // user_sessions:{phoneNumber} một cách dễ dàng
+            // Nếu bạn có một map sessionID -> phoneNumber (lưu khi CONNECT), bạn có thể
+            // dùng nó ở đây
+            // Hiện tại, chỉ log. Việc dọn dẹp session mồ côi có thể cần cơ chế khác.
+            log.warn(
+                    "WebSocket session {} disconnected (possibly abruptly) BUT Principal is NULL or name is NULL. Instance ID: {}",
+                    sessionId, instanceId);
         } else {
-            log.warn("WebSocket disconnected (possibly abruptly) BUT Principal is NULL or name is NULL. Session ID: {}",
-                    accessor.getSessionId());
+            log.warn("WebSocket disconnected event received with NULL sessionId. Instance ID: {}", instanceId);
         }
     }
 }
