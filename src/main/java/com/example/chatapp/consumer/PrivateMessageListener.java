@@ -1,3 +1,4 @@
+// src/main/java/com/example/chatapp/consumer/PrivateMessageListener.java
 package com.example.chatapp.consumer;
 
 import com.example.chatapp.repository.PrivateChatMessageRepository;
@@ -38,9 +39,9 @@ public class PrivateMessageListener {
   public void listenPrivateMessages(Message kafkaReceivedMessage) {
     if (kafkaReceivedMessage.getMessageType() != MessageType.PRIVATE ||
         kafkaReceivedMessage.getRecipientPhoneNumber() == null ||
-        kafkaReceivedMessage.getMessageId() == null) { // Luôn kiểm tra messageId
-      log.trace("[Instance: {}] Ignored invalid PRIVATE message (missing type, recipient, or messageId): {}",
-          currentInstanceId, kafkaReceivedMessage);
+        kafkaReceivedMessage.getSender() == null ||
+        kafkaReceivedMessage.getMessageId() == null) {
+      log.trace("[Instance: {}] Ignored invalid PRIVATE message: {}", currentInstanceId, kafkaReceivedMessage);
       return;
     }
 
@@ -48,59 +49,81 @@ public class PrivateMessageListener {
     String senderPhoneNumber = kafkaReceivedMessage.getSender();
     String messageId = kafkaReceivedMessage.getMessageId();
 
-    log.info("[Instance: {}] Received PRIVATE message ID [{}] from Kafka for recipient [{}]: '{}' from sender [{}]",
-        currentInstanceId, messageId, recipientPhoneNumber, kafkaReceivedMessage.getContent(), senderPhoneNumber);
+    log.info("[Instance: {}] Received PRIVATE message ID [{}] from Kafka. Sender: [{}], Recipient: [{}], Content: '{}'",
+        currentInstanceId, messageId, senderPhoneNumber, recipientPhoneNumber, kafkaReceivedMessage.getContent());
 
-    // --- LƯU TIN NHẮN VÀO DATABASE (VỚI XỬ LÝ UNIQUE INDEX) ---
+    // --- LƯU TIN NHẮN VÀO DATABASE (CHỈ 1 LẦN) ---
     PrivateChatMessage chatToSave = new PrivateChatMessage(kafkaReceivedMessage);
-    boolean messageSavedByThisInstance = false;
+    boolean messageNewlySaved = false;
     try {
-      privateMessageRepository.save(chatToSave);
-      messageSavedByThisInstance = true; // Đánh dấu là instance này đã lưu thành công
-      log.info("[Instance: {}] Successfully saved PRIVATE message ID [{}] to DB. DB_ID: {}",
-          currentInstanceId, messageId, chatToSave.getId());
+      if (!privateMessageRepository.findByMessageId(messageId).isPresent()) {
+        privateMessageRepository.save(chatToSave);
+        messageNewlySaved = true;
+        log.info("[Instance: {}] Saved PRIVATE message ID [{}] to DB. DB_ID: {}",
+            currentInstanceId, messageId, chatToSave.getId());
+      } else {
+        log.info("[Instance: {}] Message ID [{}] already in DB. Skipping save.", currentInstanceId, messageId);
+      }
     } catch (DuplicateKeyException e) {
       log.warn(
-          "[Instance: {}] PRIVATE message ID [{}] already exists in DB (likely saved by another instance). Skipping save. Exception: {}",
+          "[Instance: {}] Message ID [{}] caused DuplicateKeyException (likely saved by another instance). Skipping. Msg: {}",
           currentInstanceId, messageId, e.getMessage());
     } catch (Exception e) {
-      log.error(
-          "[Instance: {}] Error saving PRIVATE message ID [{}] to DB (Sender: {}, Recipient: {}): {}. Message: {}",
-          currentInstanceId, messageId, senderPhoneNumber, recipientPhoneNumber, e.getMessage(), kafkaReceivedMessage,
-          e);
+      log.error("[Instance: {}] Error saving PRIVATE message ID [{}] to DB: {}. Message: {}",
+          currentInstanceId, messageId, e.getMessage(), kafkaReceivedMessage, e);
     }
     // --- KẾT THÚC LƯU DATABASE ---
 
-    // --- GỬI WEBSOCKET ---
-    // Chỉ instance nào đang giữ kết nối của người nhận mới gửi tin nhắn WebSocket
-    String recipientActualInstanceId = presenceService.getUserInstance(recipientPhoneNumber);
-
-    if (currentInstanceId.equals(recipientActualInstanceId)) {
-      String userSpecificQueueName = "/queue/private-messages";
-      log.info("[Instance: {}] Recipient [{}] for message ID [{}] is ON THIS INSTANCE. Sending via WebSocket...",
+    // --- GỬI WEBSOCKET CHO NGƯỜI NHẬN ---
+    // Kiểm tra xem người nhận có session nào active trên instance này không
+    if (presenceService.hasUserActiveSessionOnInstance(recipientPhoneNumber, currentInstanceId)) {
+      log.info(
+          "[Instance: {}] RECIPIENT [{}] for message ID [{}] has active session(s) ON THIS INSTANCE. Sending via WebSocket.",
           currentInstanceId, recipientPhoneNumber, messageId);
-      try {
-        messagingTemplate.convertAndSendToUser(
-            recipientPhoneNumber,
-            userSpecificQueueName,
-            kafkaReceivedMessage);
-        log.info("[Instance: {}] Successfully sent PRIVATE message ID [{}] to user [{}] via WebSocket.",
-            currentInstanceId, messageId, recipientPhoneNumber);
-      } catch (Exception e) {
-        log.error("[Instance: {}] Error sending PRIVATE message ID [{}] via WebSocket to user [{}]: {}",
-            currentInstanceId, messageId, recipientPhoneNumber, e.getMessage(), e);
-      }
+      sendToUserViaWebSocket(recipientPhoneNumber, kafkaReceivedMessage, "RECIPIENT");
     } else {
-      if (recipientActualInstanceId != null) {
+      if (presenceService.isUserOnline(recipientPhoneNumber)) { // User online nhưng ở instance khác
         log.info(
-            "[Instance: {}] Recipient [{}] for message ID [{}] is online on instance [{}]. Message not sent from this instance [{}].",
-            currentInstanceId, recipientPhoneNumber, messageId, recipientActualInstanceId, currentInstanceId);
-      } else {
+            "[Instance: {}] RECIPIENT [{}] for message ID [{}] is online on ANOTHER instance. Not sending WebSocket from this instance [{}].",
+            currentInstanceId, recipientPhoneNumber, messageId, currentInstanceId);
+      } else { // User offline hoàn toàn
         log.info(
-            "[Instance: {}] Recipient [{}] for message ID [{}] is OFFLINE. Message not sent from this instance [{}]. (Saved status: {})",
-            currentInstanceId, recipientPhoneNumber, messageId, currentInstanceId,
-            messageSavedByThisInstance ? "Saved by this instance" : "Potentially saved by another or save failed");
+            "[Instance: {}] RECIPIENT [{}] for message ID [{}] is OFFLINE. Not sending WebSocket from this instance [{}]. Saved status: {}",
+            currentInstanceId, recipientPhoneNumber, messageId, currentInstanceId, messageNewlySaved);
       }
+    }
+
+    // --- GỬI WEBSOCKET CHO NGƯỜI GỬI (ĐỂ ĐỒNG BỘ CÁC THIẾT BỊ KHÁC CỦA NGƯỜI GỬI)
+    // ---
+    // Chỉ gửi nếu người gửi không phải là người nhận (tránh gửi lại cho chính mình
+    // nếu tự chat)
+    if (!senderPhoneNumber.equals(recipientPhoneNumber)) {
+      if (presenceService.hasUserActiveSessionOnInstance(senderPhoneNumber, currentInstanceId)) {
+        log.info(
+            "[Instance: {}] SENDER [{}] for message ID [{}] has active session(s) ON THIS INSTANCE. Sending SYNC message for sender's other devices.",
+            currentInstanceId, senderPhoneNumber, messageId);
+        sendToUserViaWebSocket(senderPhoneNumber, kafkaReceivedMessage, "SENDER_SYNC");
+      } else {
+        // Không cần log nhiều ở đây vì instance khác (nơi sender active) sẽ xử lý
+        log.trace(
+            "[Instance: {}] SENDER [{}] for message ID [{}] has no active session on this instance. Sync message not sent from here.",
+            currentInstanceId, senderPhoneNumber, messageId);
+      }
+    }
+  }
+
+  private void sendToUserViaWebSocket(String targetUserPhoneNumber, Message messagePayload, String purpose) {
+    String userSpecificQueueName = "/queue/private-messages"; // Client subscribe vào /user/queue/private-messages
+    try {
+      messagingTemplate.convertAndSendToUser(
+          targetUserPhoneNumber,
+          userSpecificQueueName,
+          messagePayload);
+      log.info("[Instance: {}] Sent {} message (Origin ID: [{}]) to user [{}] via WebSocket (queue: {}).",
+          currentInstanceId, purpose, messagePayload.getMessageId(), targetUserPhoneNumber, userSpecificQueueName);
+    } catch (Exception e) {
+      log.error("[Instance: {}] Error sending {} message (Origin ID: [{}]) via WebSocket to user [{}]: {}",
+          currentInstanceId, purpose, messagePayload.getMessageId(), targetUserPhoneNumber, e.getMessage(), e);
     }
   }
 }

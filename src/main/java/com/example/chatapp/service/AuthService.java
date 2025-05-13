@@ -110,20 +110,13 @@ public class AuthService {
    *                    SecurityContext)
    */
   public void logout(String phoneNumber) {
-    // Vì PresenceService dùng phoneNumber làm key, chúng ta truyền phoneNumber vào.
-    // WebSocketConfig khi disconnect cũng sẽ dùng phoneNumber từ Principal để gọi
-    // setUserOffline.
-    // Việc gọi ở đây đảm bảo user offline ngay cả khi họ chỉ logout qua HTTP mà
-    // không đóng tab (WebSocket chưa disconnect ngay).
-    presenceService.setUserOffline(phoneNumber);
-    log.info("User with phone {} logged out. Marked as offline in PresenceService.", phoneNumber);
+    // Xóa tất cả các session của user này khỏi PresenceService
+    presenceService.removeAllSessionsForUser(phoneNumber);
+    log.info("User with phone {} logged out via HTTP. All WebSocket sessions marked offline.", phoneNumber);
 
-    // Tùy chọn: Xóa refresh token khỏi DB để vô hiệu hóa hoàn toàn session từ phía
-    // server
-    // Điều này sẽ buộc user phải login lại hoàn toàn ở lần sau.
     User user = userRepository.findByPhoneNumber(phoneNumber).orElse(null);
     if (user != null) {
-      user.setRefreshToken(null); // Xóa refresh token
+      user.setRefreshToken(null);
       userRepository.save(user);
       log.info("Refresh token for user with phone {} has been invalidated.", phoneNumber);
     }
