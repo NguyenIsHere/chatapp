@@ -1,8 +1,7 @@
 package com.example.chatapp.controller;
 
-import com.example.chatapp.dto.MessageRequests; // Client chỉ cần gửi content cho room message
+import com.example.chatapp.dto.MessageRequests;
 import com.example.chatapp.repository.entities.Message;
-// import com.example.chatapp.repository.entities.Message.MessageType; // Không cần nếu dùng static factory
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +12,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Controller;
 import java.security.Principal;
-import java.util.UUID; // Thêm import cho UUID
+import java.util.UUID;
 
 @Controller
 @RequiredArgsConstructor

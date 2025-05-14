@@ -1,8 +1,7 @@
 package com.example.chatapp.controller;
 
 import com.example.chatapp.dto.PrivateMessageRequestDto;
-import com.example.chatapp.repository.entities.Message; // Đảm bảo Message entity được import đúng
-// import com.example.chatapp.repository.entities.Message.MessageType; // Không cần nếu dùng static factory
+import com.example.chatapp.repository.entities.Message;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
